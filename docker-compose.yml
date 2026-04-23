@@ -1,0 +1,70 @@
+# docker-compose.yml
+# Boxer SfM + SAM3 Coral Detection Pipeline
+#
+# Quick start:
+#
+#   1. Copy and edit the environment file:
+#        cp .env.example .env
+#
+#   2. Download SAM3 + Boxer weights (one time, ~5 GB):
+#        docker compose --profile setup run download_weights
+#
+#   3. Run the full pipeline:
+#        docker compose up boxer
+#
+# Results appear in ${OUTPUT_DIR} (default: ./output/):
+#   boxer_sfm_3dbbs.csv         – per-frame 3-D bounding boxes
+#   boxer_sfm_3dbbs_fused.csv   – globally fused instances
+#   sam3_masks/                 – per-frame mask overlays (if --save_masks)
+#   coral_instances.ply         – coloured instance point cloud (if --export_ply)
+#
+# CPU-only override:
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up boxer
+
+services:
+
+  # ── Main inference service ─────────────────────────────────────────────────
+  boxer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: boxer-sfm:gpu
+    volumes:
+      - ${METASHAPE_DIR:?Set METASHAPE_DIR in .env}:/data/input:ro
+      - ${OUTPUT_DIR:-./output}:/data/output
+      - ${CKPT_DIR:-./ckpts}:/app/ckpts
+    environment:
+      - PROMPTS=${PROMPTS:-coral}
+      - SAM3_MODE=${SAM3_MODE:-image}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: >
+      python run_boxer_sfm.py
+        --metashape_dir /data/input
+        --prompts "${PROMPTS:-coral}"
+        --sam3_mode ${SAM3_MODE:-image}
+        --output_dir /data/output
+        --sam3_ckpt /app/ckpts
+        --thresh3d 0.1
+        --fuse
+        --export_ply
+    restart: "no"
+
+  # ── Weight download helper ─────────────────────────────────────────────────
+  # Usage:  docker compose --profile setup run download_weights
+  download_weights:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: boxer-sfm:gpu
+    volumes:
+      - ${CKPT_DIR:-./ckpts}:/app/ckpts
+    command: bash scripts/download_weights.sh /app/ckpts
+    profiles:
+      - setup
+    restart: "no"

@@ -1,0 +1,60 @@
+# docker/Dockerfile.cpu
+# Boxer SfM pipeline – CPU-only image (no GPU required)
+#
+# Build:
+#   docker build -f docker/Dockerfile.cpu -t boxer-sfm:cpu .
+#
+# Run:
+#   docker run \
+#     -v /path/to/metashape_export:/data/input:ro \
+#     -v ./output:/data/output \
+#     -v ./ckpts:/app/ckpts \
+#     -e PROMPTS="coral" \
+#     boxer-sfm:cpu
+
+FROM python:3.12-slim
+
+# ── System dependencies ──────────────────────────────────────────────────────
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+        git \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Upgrade pip ──────────────────────────────────────────────────────────────
+RUN pip install --no-cache-dir --upgrade pip
+
+# ── PyTorch (CPU) ────────────────────────────────────────────────────────────
+RUN pip install --no-cache-dir \
+    torch==2.4.0 \
+    torchvision==0.19.0 \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# ── Python dependencies ──────────────────────────────────────────────────────
+RUN pip install --no-cache-dir \
+    huggingface_hub \
+    ultralytics \
+    open3d \
+    scipy \
+    tqdm \
+    opencv-python-headless \
+    numpy \
+    Pillow
+
+# ── Copy source & install ────────────────────────────────────────────────────
+WORKDIR /app
+COPY . /app
+
+RUN pip install --no-cache-dir -e . 2>/dev/null || true
+
+# ── Runtime environment ──────────────────────────────────────────────────────
+ENV PYTHONPATH=/app
+ENV PROMPTS=coral
+ENV SAM3_MODE=image
+
+RUN mkdir -p /data/input /data/output /app/ckpts
+
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

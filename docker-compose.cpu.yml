@@ -1,0 +1,25 @@
+# docker-compose.cpu.yml
+# CPU-only override for Boxer SfM pipeline.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up boxer
+#
+# This file overrides the GPU-specific settings in docker-compose.yml so the
+# pipeline runs on any machine without an NVIDIA GPU (slower but functional).
+
+services:
+  boxer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    image: boxer-sfm:cpu
+    deploy: {}   # Remove NVIDIA GPU reservation
+    environment:
+      - PROMPTS=${PROMPTS:-coral}
+      - SAM3_MODE=${SAM3_MODE:-image}
+
+  download_weights:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    image: boxer-sfm:cpu
