@@ -249,6 +249,3 @@ def _write_ply(path: str, pts: np.ndarray, rgb: np.ndarray) -> None:
         for i in range(n):
             f.write(struct.pack("<fffBBB", pts[i, 0], pts[i, 1], pts[i, 2],
                                 int(rgb[i, 0]), int(rgb[i, 1]), int(rgb[i, 2])))
-
-
-

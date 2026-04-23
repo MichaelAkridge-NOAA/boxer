@@ -395,7 +395,7 @@ def main():
 
             # Assign the SAM3 prompt label to the detection
             # (BoxerNet uses sem_id internally; we pass it through text)
-            label = text_prompts[0] if len(text_prompts) == 1 else text_prompts[0]
+            label = text_prompts[det_idx % len(text_prompts)]
 
             try:
                 with torch.no_grad():

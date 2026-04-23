@@ -5,4 +5,3 @@
 from loaders.metashape_loader import MetashapeLoader
 
 __all__ = ["MetashapeLoader"]
-
